@@ -2,7 +2,6 @@ Block-wsscol
 =======================
 
 * Maintained by: Serge FELIX
-* Copyright: 2021 [Université Lumière Lyon 2](https://www.univ-lyon2.fr)
 * License: [GNU GPL v3 or later](http://www.gnu.org/copyleft/gpl.html)
 
 WSSCOL for "WebServices de Scolarité" - Schooling Webservices
@@ -12,8 +11,9 @@ Description
 This plugin provides a new enrolment method for synchronise students from webservices.
 This plugin does not provide the webservices to request
 
-In our university we utilyze it to request webservices that request schooling apps Apogée and ADE.
-
+This plugin was initially created at University Lyon 2 and utilizes web services that access the educational applications Apogée and ADE.
+It is still used to this day.
+It is now also used in another school to access Aurion.
 
 
 Installation
