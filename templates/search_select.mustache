@@ -1,0 +1,68 @@
+{{!
+	@template enrol_wsscol/search_select
+
+	Simple search input.
+
+	Example context (json):
+	{
+		"action": "https://moodle.local/enrol/wsscol/add_instances.php",
+		"extraclasses": "my-2",
+		"inputname": "search",
+		"inform": false,
+		"searchstring": "Search settings",
+		"searchplaceholder": "Search placeholder",
+		"value": "policy",
+		"btnclass": "primary",
+		"query": "i don't say blablabla",
+		"options": [
+        	{
+        		"value": 1,
+        		"name": "ade",
+        		"default": true
+        	}
+		],
+		"label-select" : "select label",
+		"hiddenfields": [
+			{
+				"name": "courseid",
+				"value": 1
+			}
+		]
+	}
+}}
+<form autocomplete="off" action="{{ action }}" method="get" accept-charset="utf-8"
+      class="mform form-inline simplesearchform">
+    {{#hiddenfields}}
+        <input type="hidden" name="{{ name }}" value="{{ value }}">
+    {{/hiddenfields}}
+    <div class="input-group">
+        <label for="searchinput-{{uniqid}}">
+            <span class="sr-only">{{{ searchstring }}}</span>
+        </label>
+        <input type="text"
+               id="searchinput-{{uniqid}}"
+               class="form-control"
+               placeholder="{{searchplaceholder}}"
+               aria-label="{{ searchstring }}"
+               name="{{ inputname }}"
+               data-region="input"
+               autocomplete="off"
+               value="{{ query }}"
+        >
+        <div class="input-group-append">
+            <button type="submit" class="btn {{^btnclass}}btn-submit{{/btnclass}} {{ btnclass }} search-icon">
+                {{#pix}} a/search, core {{/pix}}
+                <span class="sr-only">{{ searchstring }}</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="form-group form-inline">
+        <label for={{selectname}}>{{label-select}}</label>
+        <select name={{selectname}} class="custom-select">
+            {{#options}}
+                <option value={{value}} {{selected}}>{{name}}</option>
+            {{/options}}
+        </select>
+    </div>
+</form>
