@@ -47,6 +47,14 @@ class wsedit_form extends moodleform {
         $mform->addRule('name', null, 'required');
         $mform->addRule('name', null, 'maxlength', 16);
 
+        $mform->addElement('select', 'type', get_string('type', 'enrol_wsscol'), [
+            ''       => get_string('typegeneric', 'enrol_wsscol'),
+            'pegase' => 'PEGASE',
+            'aurion' => 'Aurion',
+            'apogee' => 'Apogée',
+        ]);
+        $mform->setType('type', PARAM_NOTAGS);
+
         $options = get_default_enrol_roles(context_system::instance());
         $defaultrole = get_config('enrol_wsscol', 'roleid');
         $mform->addElement('select', 'role', 'role', $options);
@@ -116,6 +124,28 @@ class wsedit_form extends moodleform {
         $mform->addElement('text', 'searchgroups_name_ws', 'searchgroups_name_ws', array('size' => '16'));
         $mform->setType('searchgroups_name_ws', PARAM_NOTAGS);
         $mform->addRule('searchgroups_name_ws', null, 'maxlength', 16);
+
+
+        // AJOUT OLIVIER - champs optionnels pour l'auth token
+        // Optional - only for token-based auth
+        $mform->addElement('text', 'authurl', 'Auth URL (optionnel)', ['size' => '253']);
+        $mform->setType('authurl', PARAM_NOTAGS);
+
+        $mform->addElement('select', 'tokenmethod', 'Méthode auth token', [
+            ''    => 'Aucune (auth basique)',
+            'cas' => 'CAS',
+        ]);
+        $mform->setType('tokenmethod', PARAM_NOTAGS);
+
+        // AJOUT OLIVIER - champs optionnels pour la période et la structure
+        // Optional - only for token-based auth     
+        $mform->addElement('text', 'getstudents_periode', 'Période (placeholder [periode])', ['size' => '32']);
+        $mform->setType('getstudents_periode', PARAM_NOTAGS);
+        $mform->addRule('getstudents_periode', null, 'maxlength', 32);
+
+        $mform->addElement('text', 'getstudents_structure', 'Code structure (placeholder [structure])', ['size' => '32']);
+        $mform->setType('getstudents_structure', PARAM_NOTAGS);
+        $mform->addRule('getstudents_structure', null, 'maxlength', 32);
 
         $submitlabel = null; // Default.
         if ($this->isadding) {

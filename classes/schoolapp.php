@@ -40,6 +40,10 @@ class schoolapp extends \enrol_wsscol\webservice {
     private $searchgroupsuri = '';
     private $searchgroupscodews = '';
     private $searchgroupsnamews = '';
+    // OLIVIER nouvelles déclas
+    private $getstudentsperiode   = '';
+    private $getstudentsstructure = '';
+    private $type = '';
 
     /**
      * @param int $wsid
@@ -72,6 +76,13 @@ class schoolapp extends \enrol_wsscol\webservice {
         $this->searchgroupsuri = $wsapp->searchgroups_uri ?? NULL;
         $this->searchgroupscodews = $wsapp->searchgroups_code_ws ?? NULL;
         $this->searchgroupsnamews = $wsapp->searchgroups_name_ws ?? NULL;
+        /// AJOUT OLIVIER nouvelles décla
+        $this->authurl     = $wsapp->authurl     ?? '';
+        $this->tokenmethod = $wsapp->tokenmethod ?? '';
+        $this->getstudentsperiode   = $wsapp->getstudents_periode ?? '';
+        $this->getstudentsstructure = $wsapp->getstudents_structure ?? '';
+        $this->type = $wsapp->type ?? '';
+
     }
     
     /**
@@ -121,40 +132,120 @@ class schoolapp extends \enrol_wsscol\webservice {
         }
     }
 
-    /**
-     * getstudents get students from course
-     *
-     * @param string $search course code to search
-     * @Return mixed false or array of users : [userid] => array (id,lastname,firstname,email,username)
-     */
+    // /**
+    //  * getstudents get students from course
+    //  *
+    //  * @param string $search course code to search
+    //  * @Return mixed false or array of users : [userid] => array (id,lastname,firstname,email,username)
+    //  */
+    // public function getstudents($search) {
+    //     global $DB;
+    // //     $pattern = array('%\[search\]%');
+    // //     $replacement = array($search);
+	// // $uri = preg_replace($pattern, $replacement, $this->getstudentsuri);
+
+    //     //// OLIVIER construction de l'URI avec des placeholders multiples
+    //     $pattern = [
+    //         '%\[search\]%',
+    //         '%\[periode\]%',
+    //         '%\[structure\]%',
+    //     ];
+    //     $replacement = [
+    //         $search,
+    //         $this->getstudentsperiode ?? '',
+    //         $this->getstudentsstructure ?? '',
+    //     ];
+    //     $uri = preg_replace($pattern, $replacement, $this->getstudentsuri);
+
+
+    //     try {
+    //         $students = $this->getfromws($uri);
+    //     } catch (Exception $e) {
+    //         echo 'Exception : ', $e->getMessage(), "\n";
+	// }
+    //     // Return must be an array. And an empty array is not a NULL value
+    //     // We make no difference between a response with 0 result and a bad request (with a bad code).
+    //     // The both respond a http 204 (in our university).
+    //     // So use a different error code from 204 for a bad request code.
+    //     // Do'nt know what to use yet, it's not a 400 error.
+    //     if ($students == '') {
+    //         return array();
+    //     } else {
+    //         $users = array();
+    //         foreach ($students as $key => $val) {
+    //             $userdb =
+    //                     $DB->get_record('user', array($this->getstudentidlocal => $val[$this->getstudentidws]),
+    //                             'id,lastname,firstname,email,username');
+    //             if ($userdb) {
+    //                 $users[$userdb->id] = $userdb;
+    //             }
+    //         }
+    //         return $users;
+    //     }
+    // }
+
     public function getstudents($search) {
         global $DB;
-        $pattern = array('%\[search\]%');
-        $replacement = array($search);
-	$uri = preg_replace($pattern, $replacement, $this->getstudentsuri);
+        ////  placeholders multiples pour récupérer l'établissement etc.
+        $pattern     = ['%\[search\]%', '%\[periode\]%', '%\[structure\]%'];
+        $replacement = [$search, $this->getstudentsperiode, $this->getstudentsstructure];
+        $uri         = preg_replace($pattern, $replacement, $this->getstudentsuri);
+
         try {
-            $students = $this->getfromws($uri);
+            $response = $this->getfromws($uri);
         } catch (Exception $e) {
             echo 'Exception : ', $e->getMessage(), "\n";
-	}
-        // Return must be an array. And an empty array is not a NULL value
-        // We make no difference between a response with 0 result and a bad request (with a bad code).
-        // The both respond a http 204 (in our university).
-        // So use a different error code from 204 for a bad request code.
-        // Do'nt know what to use yet, it's not a 400 error.
-        if ($students == '') {
-            return array();
-        } else {
-            $users = array();
-            foreach ($students as $key => $val) {
-                $userdb =
-                        $DB->get_record('user', array($this->getstudentidlocal => $val[$this->getstudentidws]),
-                                'id,lastname,firstname,email,username');
-                if ($userdb) {
-                    $users[$userdb->id] = $userdb;
+            return [];
+        }
+
+        if (empty($response)) {
+            return [];
+        }
+
+        // GERER DEUX CAS :
+        // Structure PEGASE: [{"objetFormation": {...}, "listeApprenants": [...]}, ...]
+        // Structure WS standard: [{"id_field": "...", ...}, ...]
+        $students = [];
+        foreach ($response as $item) {
+            if (isset($item['listeApprenants'])) {
+                // Si c'est une réponse de PEGASE imbriquée : on applatit
+                foreach ($item['listeApprenants'] as $student) {
+                    $code = $student[$this->getstudentidws] ?? null;
+                    if ($code && !isset($students[$code])) {
+                        $students[$code] = $student;
+                    }
+                }
+            } else {
+                // Si structure standard, on laisse
+                $code = $item[$this->getstudentidws] ?? null;
+                if ($code) {
+                    $students[$code] = $item;
                 }
             }
-            return $users;
         }
+
+        if (empty($students)) {
+            return [];
+        }
+
+        // On mappe sur le profil utilisateur Moodle
+        $users = [];
+        foreach ($students as $student) {
+            $userdb = $DB->get_record(
+                'user',
+                [$this->getstudentidlocal => $student[$this->getstudentidws]],
+                'id, lastname, firstname, email, username'
+            );
+            if ($userdb) {
+                $users[$userdb->id] = $userdb;
+            }
+        }
+
+        return $users;
     }
+    // Récupère le type d'inscription
+    public function gettype(): string {
+    return $this->type;
+}
+
 }

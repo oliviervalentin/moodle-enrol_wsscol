@@ -323,8 +323,10 @@ class enrol_wsscol_plugin extends enrol_plugin {
         require_once($CFG->dirroot . '/group/lib.php');
         require_once('classes/task/sync_enrolment.php');
         $wsapp = $DB->get_record(self::WS_TABLE_NAME, array('id' => $fields['customint2']));
+        /// MODIF OLIVIER
+        /// Si customint3 est pas là, il est faciultatif.
         $fields['name'] =
-            $wsapp->name . ' (' . self::get_name_instance_etat($fields['customint3']) . '): ' . $fields['customchar1'];
+            $wsapp->name . ' (' . self::get_name_instance_etat($fields['customint3'] ?? self::INSTANCE_ETAT_AUTO) . '): ' . $fields['customchar1'];
         $fields['roleid'] = $wsapp->role;
         $instanceid = parent::add_instance($course, $fields);
         // It's instance id that is re-sended.
@@ -362,12 +364,29 @@ class enrol_wsscol_plugin extends enrol_plugin {
      * {@inheritDoc}
      * @see enrol_plugin::delete_instance()
      */
+    // public function delete_instance($instance) {
+    //     $groupidnumber = $this->code_group_idnumber($instance);
+    //     $groupobject = groups_get_group_by_idnumber($instance->courseid, $groupidnumber);
+    //     groups_delete_group($groupobject);
+    //     $return = parent::delete_instance($instance);
+    //     return $return;
+    // }
+
+    ///// MODIF OLIVIER
+    ///// Delete instance, but keeps going if no group exists.
     public function delete_instance($instance) {
+        global $CFG;
+        require_once($CFG->dirroot . '/group/lib.php');
+
         $groupidnumber = $this->code_group_idnumber($instance);
-        $groupobject = groups_get_group_by_idnumber($instance->courseid, $groupidnumber);
-        groups_delete_group($groupobject);
-        $return = parent::delete_instance($instance);
-        return $return;
+        $groupobject   = groups_get_group_by_idnumber($instance->courseid, $groupidnumber);
+
+        // Only delete group if it exists.
+        if ($groupobject) {
+            groups_delete_group($groupobject);
+        }
+
+        return parent::delete_instance($instance);
     }
 
     /**
@@ -569,13 +588,28 @@ class enrol_wsscol_plugin extends enrol_plugin {
     public function show_enrolme_link(stdClass $instance) {
         return false;
     }
+    // public function get_menu_active_scolapps() {
+    //     global $DB;
+    //     // We do'nt select scolapps that are not activated.
+    //     $select = 'status = 1 AND ';
+    //     $select .= $DB->sql_isnotempty(enrol_wsscol_plugin::WS_TABLE_NAME, 'searchgroups_uri', true, false);
+    //     $wsscolappoptions = $DB->get_records_select_menu(enrol_wsscol_plugin::WS_TABLE_NAME, $select, null, null, 'id,name');
+    //     return $wsscolappoptions;
+    // }
+
+    //// OLIVIER Modif : comme la méthode PEGASE n'a pas de searchgroups_uri, la méthode ne remonte pas dans la liste !!
+    /// à voir comment faire...
     public function get_menu_active_scolapps() {
-        global $DB;
-        // We do'nt select scolapps that are not activated.
-        $select = 'status = 1 AND ';
-        $select .= $DB->sql_isnotempty(enrol_wsscol_plugin::WS_TABLE_NAME, 'searchgroups_uri', true, false);
-        $wsscolappoptions = $DB->get_records_select_menu(enrol_wsscol_plugin::WS_TABLE_NAME, $select, null, null, 'id,name');
-        return $wsscolappoptions;
-    }
+    global $DB;
+
+    // Only filter on status — searchgroups_uri is optional
+    $wsscolappoptions = $DB->get_records_select_menu(
+        enrol_wsscol_plugin::WS_TABLE_NAME,
+        'status = 1',
+        null, null, 'id,name'
+    );
+
+    return $wsscolappoptions;
+}
 }
 

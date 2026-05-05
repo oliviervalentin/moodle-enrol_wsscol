@@ -108,4 +108,53 @@ function xmldb_enrol_wsscol_upgrade($oldversion) {
         // Wsscol savepoint reached.
         upgrade_plugin_savepoint(true, 2024070800, 'enrol', 'wsscol');
     }
+
+    // OLIVIER - upgrade pour ajouter les nouveaux champs de la table.
+    if ($oldversion < 2026042106) {
+        $table = new xmldb_table('enrol_wsscol_scolapps');
+
+        // Add authurl field
+        $field = new xmldb_field('authurl', XMLDB_TYPE_CHAR, '253', null, null, null, null, 'role');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Add tokenmethod field
+        $field = new xmldb_field('tokenmethod', XMLDB_TYPE_CHAR, '16', null, null, null, null, 'authurl');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Add getstudents_periode field
+        $field = new xmldb_field('getstudents_periode', XMLDB_TYPE_CHAR, '32', null, null, null, null,'getstudents_uri');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Add getstudents_structure field
+        $field = new xmldb_field('getstudents_structure', XMLDB_TYPE_CHAR, '32', null, null, null, null, 'getstudents_periode');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2026042106, 'enrol', 'wsscol');
+    }
+
+    // OLIVIER - upgrade 2 - garder le type d'inscription dans la table
+    if ($oldversion < 2026043000) {
+        $table = new xmldb_table('enrol_wsscol_scolapps');
+
+        $field = new xmldb_field(
+            'type', XMLDB_TYPE_CHAR, '32',
+            null, false, null, null,
+            'role'
+        );
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2026043000, 'enrol', 'wsscol');
+    }
+
+    return true;
 }

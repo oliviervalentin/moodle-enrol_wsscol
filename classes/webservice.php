@@ -37,6 +37,12 @@ abstract class webservice {
     protected $wsuser = '';
     protected $wspassword = '';
 
+
+    // AJOUT OLIVIER -  auth par token
+    protected $authurl     = '';
+    protected $tokenmethod = ''; // basic, cas
+    private   $token       = null; // cache du token !!!
+
     /**
      * @param int $wsid
      * @throws dml_exception
@@ -53,6 +59,7 @@ abstract class webservice {
 
     /**
      * getfromws : get data from webservice
+     * OLIVIER ! modifi 
      *
      * @param string $uri
      * @param string $search
@@ -60,24 +67,114 @@ abstract class webservice {
      * @throws exception
      */
     protected function getfromws($uri) {
-        $header = array('Content-Type: text/plain');
-        $curl = new \curl();
-        $curl->setHeader($header);
-        if (!is_null($this->wsuser)) {
-            $options['CURLOPT_USERPWD'] = $this->wsuser . ':' . $this->wspassword;
-        }
-	$options['CURLOPT_CONNECTTIMEOUT'] = 10;
-	$options['CURLOPT_SSL_VERIFYHOST'] = 0;
-	$options['CURLOPT_SSL_VERIFYPEER'] = 0;
+        $token = $this->get_token();
+
+    // DEBUT pour voir le retour serveur !!!
+    error_log('WSSCOL token value: ' . ($token ? substr($token, 0, 50) . '...' : 'NULL'));
+    error_log('WSSCOL authurl: ' . $this->authurl);
+    error_log('WSSCOL tokenmethod: ' . $this->tokenmethod);
+
         $url = $this->wshost . '/' . $uri;
-        $resp = $curl->get($url, null, $options);
-	$curlinfo = $curl->get_info();
-        if ($curl->error) {
-            throw new \exception('webservices error, ' . $curl->error, $curl->errno);
+
+        $ch = curl_init();
+
+        $headers = ['Accept: application/json'];
+
+        if ($token) {
+            // Token auth — Bearer header
+            $headers[] = 'Authorization: Bearer ' . $token;
+        } else if (!empty($this->wsuser)) {
+            // Basic auth
+            curl_setopt($ch, CURLOPT_USERPWD, $this->wsuser . ':' . $this->wspassword);
         }
-        if (!in_array($curlinfo['http_code'], array(200, 204))) {
-            throw new \exception('webservices '.$url.' not return valid http response, ' . $curlinfo['http_code']);
+
+        curl_setopt_array($ch, [
+            CURLOPT_URL            => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_TIMEOUT        => 30,
+            CURLOPT_HTTPHEADER     => $headers,
+        ]);
+
+        $response = curl_exec($ch);
+
+        if (curl_errno($ch)) {
+            $error = curl_error($ch);
+            curl_close($ch);
+            throw new \Exception('webservices error, ' . $error);
         }
-        return json_decode($resp, true);
+
+        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if (!in_array($httpcode, [200, 204])) {
+            throw new \Exception('webservices ' . $url . ' not return valid http response, ' . $httpcode);
+        }
+
+        if (empty($response)) {
+            return [];
+        }
+
+        return json_decode($response, true);
+    }
+
+    /**
+     * OLIVIER - récup du token
+     * Code récup. depuis mon enrol_pegase !
+     */
+    protected function get_token(): ?string {
+        if (empty($this->authurl)) {
+            return null;
+        }
+
+        if ($this->token !== null) {
+            return $this->token;
+        }
+
+        if ($this->tokenmethod === 'cas') {
+
+            // DO NOT USE http_build_query() with CAS server
+            $post_fields = 'username=' . urlencode($this->wsuser)
+                        . '&password=' . urlencode($this->wspassword)
+                        . '&token=true';
+
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL            => $this->authurl,
+                CURLOPT_POST           => true,
+                CURLOPT_POSTFIELDS     => $post_fields,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HEADER         => true,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_TIMEOUT        => 30,
+                CURLOPT_HTTPHEADER     => [
+                    'Content-Type: application/x-www-form-urlencoded',
+                ],
+            ]);
+
+            $response = curl_exec($ch);
+
+            if (curl_errno($ch)) {
+                $error = curl_error($ch);
+                curl_close($ch);
+                throw new \Exception('CAS token auth failed: ' . $error);
+            }
+
+            $httpcode    = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+            curl_close($ch);
+
+            $body = trim(substr($response, $header_size));
+
+            if ($httpcode !== 201 || empty($body)) {
+                throw new \Exception('CAS token auth failed, HTTP ' . $httpcode);
+            }
+
+            $this->token = $body;
+            return $this->token;
+        }
+
+        return null;
     }
 }

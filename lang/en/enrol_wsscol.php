@@ -59,6 +59,8 @@ $string['wsedit_title'] = 'Add Web Services';
 $string['confirm_delete_ws'] = 'Sure to delete this Web Service ?';
 $string['add_ws_button'] = 'Add new Web Service';
 $string[''] = '';
+$string['type'] = 'School application type';
+$string['typegeneric'] = 'Generic';
 
 $string['wsscol:manage'] = 'Manage user wsscol-enrolments.';
 $string['wsscol:config'] = 'Add or edit enrol-wsscol instance in course.';

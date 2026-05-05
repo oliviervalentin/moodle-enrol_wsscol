@@ -20,6 +20,12 @@
         <FIELD NAME="searchgroups_name_ws" TYPE="char" LENGTH="16" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="status" TYPE="int" LENGTH="1" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="role" TYPE="int" LENGTH="2" NOTNULL="true" SEQUENCE="false"/>
+         <!-- Nouveaux champs OLIVIER -->
+        <FIELD NAME="authurl" TYPE="char" LENGTH="253" NOTNULL="false" SEQUENCE="false" COMMENT="URL to get auth token (optional)"/>
+        <FIELD NAME="tokenmethod" TYPE="char" LENGTH="16" NOTNULL="false" SEQUENCE="false" COMMENT="Token auth method: cas, oauth, empty for basic auth"/>
+        <FIELD NAME="getstudents_periode" TYPE="char" LENGTH="32" NOTNULL="false" SEQUENCE="false" COMMENT="Fixed period placeholder value"/>
+        <FIELD NAME="getstudents_structure" TYPE="char" LENGTH="32" NOTNULL="false" SEQUENCE="false" COMMENT="Fixed structure placeholder value"/>
+        <FIELD NAME="type" TYPE="char" LENGTH="32" NOTNULL="false" DEFAULT="" SEQUENCE="false" COMMENT="Type of school application"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="id" TYPE="primary" FIELDS="id" COMMENT="id"/>
