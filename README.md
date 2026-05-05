@@ -53,3 +53,18 @@ the request to webservices is construct like that :
 
 You can ommit baseurl. Do not add trailing slash or beginning slash.
 
+Use WSScol with PEGASE
+============
+Somes changes have been brought to fit to use with PEGASE new scol app.
+In order to set a webservice with PEGASE, please proceed like this :
+* chosse PEGASE in school application type
+* in host, retrieve URL for CHC API.
+* set baseurl as api/ext/chc/v1
+* in getstudent_id_ws, add "codeApprenant"
+* for auth URL, set you CAS app delivering token
+* choose CAS method if it fits
+* "Période" must be set as needed to call CHC API. It shoulf look like "PERIODE-XX-YY" for example.
+* COde structure represents "code etablissement" needed to use PEGASE Swagger.
+
+Those changes have been made in ordre to bring necessary auth for PEGASE API, but without changing whole  WSScol plugin code
+and transform it in a specific plugin for PEGASE. WSScol basis can be applied to any enrolment webservice, such as Apogee, Aurion aso.
