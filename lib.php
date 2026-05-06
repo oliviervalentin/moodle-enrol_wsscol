@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * enrol_wsscol_plugin class
+ * Enrol_wsscol_plugin class.
  *
  * @package enrol_wsscol
  * @author Serge FELIX<serge.felix@univ-lyon2.fr>
@@ -24,11 +24,25 @@
  */
 
 use core\task\manager;
-
+/**
+ * enrol_wsscol_plugin class
+ * This class provides an enrolment plugin for wsscol based on enrol_self plugin.
+ * @package enrol_wsscol
+ * @author Serge FELIX<serge.felix@univ-lyon2.fr>
+ * @copyright Université Lumière Lyon 2  {@link http://www.univ-lyon2.fr}
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class enrol_wsscol_plugin extends enrol_plugin {
+    /** @var string IDENTIFICATION The group communication instance type. */
     public const IDENTIFICATION = 'wsscol';
+
+    /** @var int INSTANCE_ETAT_AUTO State for auto method. */
     public const INSTANCE_ETAT_AUTO = 1;
+
+    /** @var int INSTANCE_ETAT_MANUAL State for manual method. */
     public const INSTANCE_ETAT_MANUAL = 0;
+
+    /** @var string WS_TABLE_NAME Table name. */
     public const WS_TABLE_NAME = 'enrol_wsscol_scolapps';
 
     /**
@@ -43,15 +57,14 @@ class enrol_wsscol_plugin extends enrol_plugin {
             $trace = new text_progress_trace();
         }
         $trace->output('Starting user enrolment synchronisation...');
-        //$DB->set_debug(TRUE);
+
         $sql = "SELECT e.*
                       FROM {enrol} e
                       LEFT JOIN {enrol_wsscol_scolapps} ewa ON e.customint2 = ewa.id
                      WHERE ewa.status = 1";
         $instances = $DB->get_recordset_sql($sql);
-        //$instances = $DB->get_records('enrol', array('enrol' => 'wsscol'));
         foreach ($instances as $instance) {
-            $trace->output('====sync : ' . $instance->customchar1.' courseid : '.$instance->courseid);
+            $trace->output('====sync : ' . $instance->customchar1 . ' courseid : ' . $instance->courseid);
             $this->sync_enrolment($instance, $trace);
         }
     }
@@ -67,7 +80,7 @@ class enrol_wsscol_plugin extends enrol_plugin {
         global $CFG, $DB;
         // ADE is Planning App in our university
         // Get current list of enrolled users with their roles.
-        $currentroles = array();
+        $currentroles = [];
         if (!$context = context_course::instance($instance->courseid, IGNORE_MISSING)) {
             // Weird.
             return;
@@ -77,16 +90,16 @@ class enrol_wsscol_plugin extends enrol_plugin {
                       JOIN {role_assignments} ra ON (ra.userid = u.id AND ra.component = 'enrol_wsscol' AND ra.itemid = :enrolid)
                  LEFT JOIN {user_enrolments} ue ON (ue.userid = u.id AND ue.enrolid = ra.itemid)
                      WHERE u.deleted = 0";
-        $params = array('enrolid' => $instance->id);
-        $usersws = array();
-	if (isset($instance->customint2)) {
+        $params = ['enrolid' => $instance->id];
+        $usersws = [];
+        if (isset($instance->customint2)) {
             $usersws = \enrol_wsscol\schoolapp::getinstance($instance->customint2)->getstudents($instance->customchar1);
             if (empty($usersws)) {
-                $trace->output($instance->id . ' : empty group webservice side, do nothing, it is weird',1);
+                $trace->output($instance->id . ' : empty group webservice side, do nothing, it is weird', 1);
                 return;
             }
         } else {
-            $trace->output($instance->id . ' : no customid',1);
+            $trace->output($instance->id . ' : no customid', 1);
             return;
         }
 
@@ -96,7 +109,7 @@ class enrol_wsscol_plugin extends enrol_plugin {
         foreach ($rs as $ue) {
             // The Student is well enrolled in ADE.
             if (array_key_exists($ue->userid, $usersws)) {
-                unset ($usersws[$ue->userid]);
+                unset($usersws[$ue->userid]);
                 // He is enrolled in course but suspended => we unsuspended him.
                 if ($ue->status == ENROL_USER_SUSPENDED) {
                     $trace->output($ue->username . ' : activate', 2);
@@ -145,13 +158,13 @@ class enrol_wsscol_plugin extends enrol_plugin {
             // Weird.
             return;
         }
-        $trace->output('sync group '.$groupid,1);
+        $trace->output('sync group ' . $groupid, 1);
         // Get the actives members of the enrolment method.
         $sql = "SELECT u.id, u.username, ue.status
                       FROM {user} u
                       JOIN {user_enrolments} ue ON (ue.userid = u.id)
                       WHERE u.deleted = 0 AND ue.enrolid = :enrolid AND ue.status = :status";
-        $params = array('enrolid' => $instance->id,'status' => ENROL_USER_ACTIVE);
+        $params = ['enrolid' => $instance->id, 'status' => ENROL_USER_ACTIVE];
         // We get enrol's list via enrol instance.
         $enrolmembers = $DB->get_recordset_sql($sql, $params);
         // Get the members of group.
@@ -161,20 +174,20 @@ class enrol_wsscol_plugin extends enrol_plugin {
         foreach ($enrolmembers as $ue) {
             // The users are already in group.
             if (array_key_exists($ue->username, $groupmembers)) {
-                unset ($groupmembers[$ue->username]);
+                unset($groupmembers[$ue->username]);
                 // The users is not in group yet.
             } else {
                 groups_add_member($groupid, $ue->id);
-                $trace->output('add '.$ue->username.' in '.$groupid,2);
+                $trace->output('add ' . $ue->username . ' in ' . $groupid, 2);
             }
         }
         // Now we remove all users stay in $groupmembers that have the role of the instance.
         foreach ($groupmembers as $groupmember) {
-            $roles_member = get_user_roles($context,$groupmember->id,false);
-            foreach ($roles_member as $role_member) {
-                if ($role_member->roleid == $instance->roleid) {
+            $rolesmember = get_user_roles($context, $groupmember->id, false);
+            foreach ($rolesmember as $rolemember) {
+                if ($rolemember->roleid == $instance->roleid) {
                     groups_remove_member($groupid, $groupmember->id);
-                    $trace->output('remove '.$groupmember->id.' in '.$groupid,2);
+                    $trace->output('remove ' . $groupmember->id . ' in ' . $groupid, 2);
                     break;
                 }
             }
@@ -223,27 +236,27 @@ class enrol_wsscol_plugin extends enrol_plugin {
         global $CFG;
         global $DB;
         require_once($CFG->dirroot . '/group/lib.php');
-        $message_test = ($test)?'Start in Test Mode, No Action':'Start in Action Mode';
-        $params = array('idnumber' => 'sfx%', 'description' => 'groupe automatique', 'name' => '%doublon%');
-        $sql = "SELECT g.id,g.courseid,g.idnumber 
+        $messagetest = ($test) ? 'Start in Test Mode, No Action' : 'Start in Action Mode';
+        $params = ['idnumber' => 'sfx%', 'description' => 'groupe automatique', 'name' => '%doublon%'];
+        $sql = "SELECT g.id,g.courseid,g.idnumber
                       FROM {groups} g
                       WHERE g.idnumber LIKE :idnumber and description = :description and name LIKE :name";
-        $rs = $DB->get_recordset_sql($sql,$params);
-        $trace->output($message_test);
+        $rs = $DB->get_recordset_sql($sql, $params);
+        $trace->output($messagetest);
         foreach ($rs as $group) {
             $code = $this->decode_group_idnumber($group->idnumber);
-            $instance = $DB->get_record('enrol', array('id' => $code->instanceid,'courseid'=> $group->courseid));
-            $trace->output('=== '.$group->id.' '.$group->idnumber);
+            $instance = $DB->get_record('enrol', ['id' => $code->instanceid, 'courseid' => $group->courseid]);
+            $trace->output('=== ' . $group->id . ' ' . $group->idnumber);
             // Exclude some courses.
-            $courses_exclude = array();
-            if (in_array($group->courseid,$courses_exclude)) {
-                //$data->name = $instance->customchar1;
+            $coursesexclude = [];
+            if (in_array($group->courseid, $coursesexclude)) {
+                // $data->name = $instance->customchar1;
                 continue;
             }
             // If method enrol don't exist, it's a ghost group, delete it.
             if (!$instance) {
                 $trace->output('issue ghost group groupid : ' . $group->id . ', idnumber : ' . $group->idnumber . ', enrolid :' .
-                            $code->instanceid . ', courseid : ' . $group->courseid,2);
+                            $code->instanceid . ', courseid : ' . $group->courseid, 2);
                 if ($delete) {
                     groups_delete_group($group->id);
                 }
@@ -251,30 +264,41 @@ class enrol_wsscol_plugin extends enrol_plugin {
             }
             // Check what we want to check.
             // Here if the group is use in availability
-            $params = array('groupid' => '%{"type":"group","id":'.$group->id.'}%');
+            $params = ['groupid' => '%{"type":"group","id":' . $group->id . '}%'];
             $sql = "SELECT cm.id,cm.course
                       FROM {course_modules} cm
                       WHERE cm.availability LIKE :groupid";
-            $cm = $DB->get_records_sql($sql,$params);
+            $cm = $DB->get_records_sql($sql, $params);
             if (!$cm) {
-                $trace->output('delete it cause not use',2);
+                $trace->output('delete it cause not use', 2);
                 if ($delete) {
                     groups_delete_group($group->id);
-                }               
+                }
             } else {
-                $trace->output('keep it cause use',2);
+                $trace->output('keep it cause use', 2);
             }
         }
         $rs->close();
     }
-
+    /**
+     * Codes the group idnumber.
+     *
+     * @param stdClass $instance
+     * @return string
+     */
     public function code_group_idnumber(stdClass $instance) {
         return $this->get_name() . '/' . $instance->id;
     }
 
+    /**
+     * Decodes the group idnumber.
+     *
+     * @param string $idnumber
+     * @return stdClass
+     */
     public function decode_group_idnumber(string $idnumber) {
-        $instanceid=substr(strrchr($idnumber,'/'),1);
-        $name = strstr($idnumber,'/',true);
+        $instanceid = substr(strrchr($idnumber, '/'), 1);
+        $name = strstr($idnumber, '/', true);
         $code = new stdClass();
         $code->name = $name;
         $code->instanceid = $instanceid;
@@ -306,7 +330,7 @@ class enrol_wsscol_plugin extends enrol_plugin {
      * @return array
      */
     public function get_instance_defaults() {
-        $fields = array();
+        $fields = [];
         $fields['roleid'] = $this->get_config('roleid');
         return $fields;
     }
@@ -322,11 +346,12 @@ class enrol_wsscol_plugin extends enrol_plugin {
         global $CFG, $DB, $USER;
         require_once($CFG->dirroot . '/group/lib.php');
         require_once('classes/task/sync_enrolment.php');
-        $wsapp = $DB->get_record(self::WS_TABLE_NAME, array('id' => $fields['customint2']));
-        /// MODIF OLIVIER
-        /// Si customint3 est pas là, il est faciultatif.
+        $wsapp = $DB->get_record(self::WS_TABLE_NAME, ['id' => $fields['customint2']]);
+        // MODIF OLIVIER.
+        // Si customint3 est pas là, il est facultatif.
         $fields['name'] =
-            $wsapp->name . ' (' . self::get_name_instance_etat($fields['customint3'] ?? self::INSTANCE_ETAT_AUTO) . '): ' . $fields['customchar1'];
+            $wsapp->name . ' (' . self::get_name_instance_etat($fields['customint3'] ?? self::INSTANCE_ETAT_AUTO) . '): ' .
+                $fields['customchar1'];
         $fields['roleid'] = $wsapp->role;
         $instanceid = parent::add_instance($course, $fields);
         // It's instance id that is re-sended.
@@ -334,11 +359,11 @@ class enrol_wsscol_plugin extends enrol_plugin {
             $instance = $DB->get_record('enrol', ['id' => $instanceid], '*', MUST_EXIST);
             if ($instance) {
                 $syncenrolmenttask = new \enrol_wsscol\task\sync_enrolment();
-                $syncenrolmenttask->set_custom_data(array('instance' => $instance));
+                $syncenrolmenttask->set_custom_data(['instance' => $instance]);
                 $syncenrolmenttask->set_userid($USER->id);
                 manager::queue_adhoc_task($syncenrolmenttask);
             }
-            //$groupid = $this->add_group_moodle($instance);
+            // $groupid = $this->add_group_moodle($instance);
         }
         return $instanceid;
     }
@@ -360,20 +385,21 @@ class enrol_wsscol_plugin extends enrol_plugin {
         }
     }
 
+    // OLD FUNCTION.
+    // public function delete_instance($instance) {
+    // $groupidnumber = $this->code_group_idnumber($instance);
+    // $groupobject = groups_get_group_by_idnumber($instance->courseid, $groupidnumber);
+    // groups_delete_group($groupobject);
+    // $return = parent::delete_instance($instance);
+    // return $return;
+    // }
+
+    // MODIF OLIVIER.
+    // Delete instance, but keeps going if no group exists.
     /**
      * {@inheritDoc}
      * @see enrol_plugin::delete_instance()
      */
-    // public function delete_instance($instance) {
-    //     $groupidnumber = $this->code_group_idnumber($instance);
-    //     $groupobject = groups_get_group_by_idnumber($instance->courseid, $groupidnumber);
-    //     groups_delete_group($groupobject);
-    //     $return = parent::delete_instance($instance);
-    //     return $return;
-    // }
-
-    ///// MODIF OLIVIER
-    ///// Delete instance, but keeps going if no group exists.
     public function delete_instance($instance) {
         global $CFG;
         require_once($CFG->dirroot . '/group/lib.php');
@@ -399,7 +425,7 @@ class enrol_wsscol_plugin extends enrol_plugin {
         $return = parent::update_instance($instance, $data);
         if ($return) {
             $syncenrolmenttask = new \enrol_wsscol\task\sync_enrolment();
-            $syncenrolmenttask->set_custom_data(array('instance' => $instance));
+            $syncenrolmenttask->set_custom_data(['instance' => $instance]);
             $syncenrolmenttask->set_userid($USER->id);
             manager::queue_adhoc_task($syncenrolmenttask);
         }
@@ -438,7 +464,7 @@ class enrol_wsscol_plugin extends enrol_plugin {
         $role = $this->extend_assignable_roles($context, $instance->roleid);
         $selectroles = $mform->addElement('select', 'roleid', get_string('role', 'enrol_wsscol'), $role);
         $selectroles->setSelected($instance->roleid);
-        $options = array('size' => '20', 'maxlength' => '20');
+        $options = ['size' => '20', 'maxlength' => '20'];
         $wsappsselect = $this->get_menu_active_scolapps();
         $mform->addElement('select', 'customint2', get_string('customint2', 'enrol_wsscol'), $wsappsselect);
         $mform->addElement('text', 'customchar1', get_string('searchlabel', 'enrol_wsscol'), $options);
@@ -466,7 +492,7 @@ class enrol_wsscol_plugin extends enrol_plugin {
         }
     }
 
-    /**
+    /*
      * @param $context
      * @param string $defaultrole
      * @return array roles
@@ -475,7 +501,7 @@ class enrol_wsscol_plugin extends enrol_plugin {
         global $DB;
         $roles = get_assignable_roles($context, ROLENAME_BOTH);
         if (!isset($roles[$defaultrole])) {
-            if ($role = $DB->get_record('role', array('id' => $defaultrole))) {
+            if ($role = $DB->get_record('role', ['id' => $defaultrole])) {
                 $roles[$defaultrole] = role_get_name($role, $context, ROLENAME_BOTH);
             }
         }
@@ -495,7 +521,7 @@ class enrol_wsscol_plugin extends enrol_plugin {
      * @see enrol_plugin::edit_instance_validation()
      */
     public function edit_instance_validation($data, $files, $instance, $context) {
-        $errors = array();
+        $errors = [];
         $validstatus = array_keys($this->get_status_options());
         $context = context_course::instance($instance->courseid);
         $validroles = array_keys($this->extend_assignable_roles($context, $instance->roleid));
@@ -508,10 +534,10 @@ class enrol_wsscol_plugin extends enrol_plugin {
         if (empty($resp)) {
             $errors['customchar1'] = 'mauvais codeX ou groupe vide';
         }
-        $tovalidate = array(
+        $tovalidate = [
                 'roleid' => $validroles,
-                'customchar1' => PARAM_TEXT
-        );
+                'customchar1' => PARAM_TEXT,
+        ];
         $typeerrors = $this->validate_param_types($data, $tovalidate);
         $errors = array_merge($errors, $typeerrors);
 
@@ -524,8 +550,10 @@ class enrol_wsscol_plugin extends enrol_plugin {
      * @return array
      */
     protected function get_status_options() {
-        $options = array(ENROL_INSTANCE_ENABLED => get_string('yes'),
-                ENROL_INSTANCE_DISABLED => get_string('no'));
+        $options = [
+            ENROL_INSTANCE_ENABLED => get_string('yes'),
+            ENROL_INSTANCE_DISABLED => get_string('no'),
+        ];
         return $options;
     }
 
@@ -572,44 +600,56 @@ class enrol_wsscol_plugin extends enrol_plugin {
     public function add_default_instance($course) {
         // Don't need default, The add of an instance ask for a code entry.
     }
-
+    /**
+     * {@inheritDoc}
+     * @see enrol_plugin::roles_protected()
+     */
     public function roles_protected() {
         return true;
     }
-
+    /**
+     * {@inheritDoc}
+     * @see enrol_plugin::allow_unenrol()
+     */
     public function allow_unenrol(stdClass $instance) {
         return false;
     }
-
+    /**
+     * {@inheritDoc}
+     * @see enrol_plugin::allow_manage()
+     */
     public function allow_manage(stdClass $instance) {
         return false;
     }
-
+    /**
+     * {@inheritDoc}
+     */
     public function show_enrolme_link(stdClass $instance) {
         return false;
     }
     // public function get_menu_active_scolapps() {
-    //     global $DB;
-    //     // We do'nt select scolapps that are not activated.
-    //     $select = 'status = 1 AND ';
-    //     $select .= $DB->sql_isnotempty(enrol_wsscol_plugin::WS_TABLE_NAME, 'searchgroups_uri', true, false);
-    //     $wsscolappoptions = $DB->get_records_select_menu(enrol_wsscol_plugin::WS_TABLE_NAME, $select, null, null, 'id,name');
-    //     return $wsscolappoptions;
+    // global $DB;
+    // // We do'nt select scolapps that are not activated.
+    // $select = 'status = 1 AND ';
+    // $select .= $DB->sql_isnotempty(enrol_wsscol_plugin::WS_TABLE_NAME, 'searchgroups_uri', true, false);
+    // $wsscolappoptions = $DB->get_records_select_menu(enrol_wsscol_plugin::WS_TABLE_NAME, $select, null, null, 'id,name');
+    // return $wsscolappoptions;
     // }
 
-    //// OLIVIER Modif : comme la méthode PEGASE n'a pas de searchgroups_uri, la méthode ne remonte pas dans la liste !!
-    /// à voir comment faire...
+    // OLIVIER Modif : comme la méthode PEGASE n'a pas de searchgroups_uri, la méthode ne remonte pas dans la liste !!
+    // à voir comment faire...
     public function get_menu_active_scolapps() {
-    global $DB;
+        global $DB;
 
-    // Only filter on status — searchgroups_uri is optional
-    $wsscolappoptions = $DB->get_records_select_menu(
-        enrol_wsscol_plugin::WS_TABLE_NAME,
-        'status = 1',
-        null, null, 'id,name'
-    );
+        // Only filter on status — searchgroups_uri is optional
+        $wsscolappoptions = $DB->get_records_select_menu(
+            self::WS_TABLE_NAME,
+            'status = 1',
+            null,
+            null,
+            'id, name'
+        );
 
-    return $wsscolappoptions;
+        return $wsscolappoptions;
+    }
 }
-}
-
