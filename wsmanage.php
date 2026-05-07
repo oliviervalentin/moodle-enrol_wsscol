@@ -39,7 +39,7 @@ if (!has_capability('moodle/site:config', $context)) {
 $managewsurl = new moodle_url('/enrol/wsscol/wsmanage.php');
 $editwsurl = new moodle_url('/enrol/wsscol/wsedit.php');
 
-$pluginurl = new moodle_url('/admin/settings.php', array('section' => 'enrolsettingswsscol'));
+$pluginurl = new moodle_url('/admin/settings.php', ['section' => 'enrolsettingswsscol']);
 $download = optional_param('download', '', PARAM_ALPHA);
 $wsapps = $DB->get_records(enrol_wsscol_plugin::WS_TABLE_NAME);
 
@@ -56,12 +56,12 @@ $PAGE->navbar->add(get_string('wsmanage_title', 'enrol_wsscol'));
 echo $OUTPUT->header();
 
 // Process any actions.
-if ($action and confirm_sesskey() and $wsid) {
+if ($action && confirm_sesskey() && $wsid) {
     $wsappobject = new stdClass();
     $wsappobject->id = intval($wsid);
     switch ($action) {
         case 'delete':
-            $DB->delete_records('enrol_wsscol_scolapps', array('id' => $wsid));
+            $DB->delete_records('enrol_wsscol_scolapps', ['id' => $wsid]);
             redirect($PAGE->url, get_string('wsappdeleted', 'enrol_wsscol'));
             break;
         case 'enable':
@@ -78,8 +78,8 @@ if ($action and confirm_sesskey() and $wsid) {
 }
 
 $table = new flexible_table('id');
-$table->define_columns(array('id', 'name', 'wshost', 'baseurl', 'actions'));
-$table->define_headers(array('id', 'name', 'wshost', 'baseurl', get_string('actions', 'moodle')));
+$table->define_columns(['id', 'name', 'wshost', 'baseurl', 'actions']);
+$table->define_headers(['id', 'name', 'wshost', 'baseurl', get_string('actions', 'moodle')]);
 $table->define_baseurl($managewsurl);
 
 $table->set_attribute('cellspacing', '0');
@@ -105,21 +105,24 @@ foreach ($wsapps as $wsapp) {
     if ($wsapp->status) {
         $activeinstanceurl->param('action', 'disable');
         $edit[] =
-                $OUTPUT->action_icon($activeinstanceurl, new pix_icon('t/hide', 'disable', 'core', array('class' => 'iconsmall')));
+                $OUTPUT->action_icon($activeinstanceurl, new pix_icon('t/hide', 'disable', 'core', ['class' => 'iconsmall']));
     } else {
         $activeinstanceurl->param('action', 'enable');
         $classname = 'dimmed_text';
-        $edit[] = $OUTPUT->action_icon($activeinstanceurl, new pix_icon('t/show', 'enable', 'core', array('class' => 'iconsmall')));
+        $edit[] = $OUTPUT->action_icon($activeinstanceurl, new pix_icon('t/show', 'enable', 'core', ['class' => 'iconsmall']));
     }
     // Deal with deleting action.
     $deleteinstanceurl = clone $managewsurl;
     $deleteinstanceurl->param('wsid', $wsapp->id);
     $deleteinstanceurl->param('sesskey', sesskey());
     $deleteinstanceurl->param('action', 'disable');
-    $edit[] = $OUTPUT->action_icon($deleteinstanceurl, new pix_icon('t/delete', get_string('delete')),
-            new confirm_action(get_string('confirm_delete_ws', 'enrol_wsscol')));
-    $table->add_data(array($wsapp->id, $wsapp->name, $wsapp->wshost, $wsapp->baseurl, implode('', $edit)),$classname);
-    unset ($edit);
+    $edit[] = $OUTPUT->action_icon(
+        $deleteinstanceurl,
+        new pix_icon('t/delete', get_string('delete')),
+        new confirm_action(get_string('confirm_delete_ws', 'enrol_wsscol'))
+    );
+    $table->add_data([$wsapp->id, $wsapp->name, $wsapp->wshost, $wsapp->baseurl, implode('', $edit)], $classname);
+    unset($edit);
 }
 
 $table->finish_output();
