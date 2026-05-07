@@ -38,10 +38,19 @@ abstract class webservice {
     protected $wspassword = '';
 
 
-    // AJOUT OLIVIER -  auth par token
+    // AJOUT OLIVIER -  auth par token.
+    /** @var string
+     * The URL for authentication.
+     */
     protected $authurl     = '';
-    protected $tokenmethod = ''; // basic, cas
-    private   $token       = null; // cache du token !!!
+    /** @var string
+     * The method for token authentication : basic, CAS.
+     */
+    protected $tokenmethod = '';
+    /** @var string|null
+     * Token cache.
+     */
+    private $token = null;
 
     /**
      * @param int $wsid
@@ -59,7 +68,7 @@ abstract class webservice {
 
     /**
      * getfromws : get data from webservice
-     * OLIVIER ! modifi 
+     * OLIVIER ! modifs pour ajouter le token dans les headers.
      *
      * @param string $uri
      * @param string $search
@@ -69,10 +78,10 @@ abstract class webservice {
     protected function getfromws($uri) {
         $token = $this->get_token();
 
-    // DEBUT pour voir le retour serveur !!!
-    error_log('WSSCOL token value: ' . ($token ? substr($token, 0, 50) . '...' : 'NULL'));
-    error_log('WSSCOL authurl: ' . $this->authurl);
-    error_log('WSSCOL tokenmethod: ' . $this->tokenmethod);
+        // DEBUGs pour voir le retour serveur !!!
+        error_log('WSSCOL token value: ' . ($token ? substr($token, 0, 50) . '...' : 'NULL'));
+        error_log('WSSCOL authurl: ' . $this->authurl);
+        error_log('WSSCOL tokenmethod: ' . $this->tokenmethod);
 
         $url = $this->wshost . '/' . $uri;
 
@@ -81,10 +90,10 @@ abstract class webservice {
         $headers = ['Accept: application/json'];
 
         if ($token) {
-            // Token auth — Bearer header
+            // Token auth — Bearer header.
             $headers[] = 'Authorization: Bearer ' . $token;
         } else if (!empty($this->wsuser)) {
-            // Basic auth
+            // Basic auth.
             curl_setopt($ch, CURLOPT_USERPWD, $this->wsuser . ':' . $this->wspassword);
         }
 
@@ -133,9 +142,8 @@ abstract class webservice {
         }
 
         if ($this->tokenmethod === 'cas') {
-
-            // DO NOT USE http_build_query() with CAS server
-            $post_fields = 'username=' . urlencode($this->wsuser)
+            // DO NOT USE http_build_query() with CAS server.
+            $postfields = 'username=' . urlencode($this->wsuser)
                         . '&password=' . urlencode($this->wspassword)
                         . '&token=true';
 
@@ -143,7 +151,7 @@ abstract class webservice {
             curl_setopt_array($ch, [
                 CURLOPT_URL            => $this->authurl,
                 CURLOPT_POST           => true,
-                CURLOPT_POSTFIELDS     => $post_fields,
+                CURLOPT_POSTFIELDS     => $postfields,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_HEADER         => true,
                 CURLOPT_SSL_VERIFYPEER => false,
@@ -162,10 +170,10 @@ abstract class webservice {
             }
 
             $httpcode    = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+            $headersize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
             curl_close($ch);
 
-            $body = trim(substr($response, $header_size));
+            $body = trim(substr($response, $headersize));
 
             if ($httpcode !== 201 || empty($body)) {
                 throw new \Exception('CAS token auth failed, HTTP ' . $httpcode);

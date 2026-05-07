@@ -60,7 +60,8 @@ class wsedit_form extends moodleform {
         $mform->addElement('select', 'role', 'role', $options);
         $mform->setType('role', PARAM_INT);
         $mform->addRule('role', null, 'required');
-        $mform->getElement('role')->setSelected($student->id);
+        // Utilité ?
+        // $mform->getElement('role')->setSelected($student->id);
 
         $mform->addElement('text', 'wshost', 'wshost', array('size' => '253'));// Addstring.
         $mform->setType('wshost', PARAM_NOTAGS);
