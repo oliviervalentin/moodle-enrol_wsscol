@@ -186,10 +186,19 @@ class schoolapp extends \enrol_wsscol\webservice {
 
     public function getstudents($search) {
         global $DB;
+
         ////  placeholders multiples pour récupérer l'établissement etc.
         $pattern     = ['%\[search\]%', '%\[periode\]%', '%\[structure\]%'];
         $replacement = [$search, $this->getstudentsperiode, $this->getstudentsstructure];
         $uri         = preg_replace($pattern, $replacement, $this->getstudentsuri);
+
+        // Debug
+        // debugging('WSSCOL getstudents URI: ' . $uri, DEBUG_DEVELOPER);
+        // debugging('WSSCOL wshost: ' . $this->wshost, DEBUG_DEVELOPER);
+        // debugging('WSSCOL authurl: ' . $this->authurl, DEBUG_DEVELOPER);
+        // debugging('WSSCOL tokenmethod: ' . $this->tokenmethod, DEBUG_DEVELOPER);
+        // debugging('WSSCOL periode: ' . $this->getstudentsperiode, DEBUG_DEVELOPER);
+        // debugging('WSSCOL structure: ' . $this->getstudentsstructure, DEBUG_DEVELOPER);
 
         try {
             $response = $this->getfromws($uri);
@@ -197,7 +206,6 @@ class schoolapp extends \enrol_wsscol\webservice {
             echo 'Exception : ', $e->getMessage(), "\n";
             return [];
         }
-
         if (empty($response)) {
             return [];
         }

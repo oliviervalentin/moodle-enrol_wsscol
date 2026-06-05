@@ -57,7 +57,6 @@ class enrol_wsscol_plugin extends enrol_plugin {
             $trace = new text_progress_trace();
         }
         $trace->output('Starting user enrolment synchronisation...');
-
         $sql = "SELECT e.*
                       FROM {enrol} e
                       LEFT JOIN {enrol_wsscol_scolapps} ewa ON e.customint2 = ewa.id
